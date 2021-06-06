@@ -6,6 +6,16 @@ namespace ShipmentRouteChecker
 {
     public class RouteChecker
     {
+        private Dictionary<string, long> weights;
+        private Dictionary<string, bool> dailyDeficit;
+        private DateTime schedulePosition;
+
+        public RouteChecker()
+        {
+            weights = new();
+            dailyDeficit = new();
+        }
+
         /// <summary>
         /// Goes through the route day-by-day, calculating resulting weights at each node.
         /// </summary>
@@ -13,16 +23,17 @@ namespace ShipmentRouteChecker
         /// <returns></returns>
         public bool VerifyRoute(ShipmentRoute route)
         {
-            Dictionary<string, long> weights = new Dictionary<string, long> { { route.Source.IATACode, route.TotalWeight } };
-            List<string> dailyDeficit = new();
-            DateTime schedulePosition = route.RouteLegs.First().ShipmentDate;
+            schedulePosition = route.RouteLegs.First().ShipmentDate;
+            weights.Clear();
+            weights[route.Source.IATACode] = route.TotalWeight;
+            dailyDeficit.Clear();
 
             // At the end of each day we check if everything's balanced (no cargo shipped before it arrived).
             bool DeficitResolved(DateTime newDate)
             {
                 foreach (var node in dailyDeficit)
                 {
-                    if (weights[node] < 0)
+                    if (weights[node.Key] < 0)
                         return false;
                 }
                 dailyDeficit.Clear();
@@ -51,11 +62,11 @@ namespace ShipmentRouteChecker
                     weights[leg.Source.IATACode] = -leg.Weight;
 
                 if (weights[leg.Source.IATACode] < 0)
-                    dailyDeficit.Add(leg.Source.IATACode);
+                    dailyDeficit[leg.Source.IATACode] = true;
             }
 
             // If everything's balanced and cargo arrived at the destination, check the total weight.
-            if(DeficitResolved(schedulePosition) && weights.ContainsKey(route.Destination.IATACode))
+            if (DeficitResolved(schedulePosition) && weights.ContainsKey(route.Destination.IATACode))
                 return weights[route.Destination.IATACode] == route.TotalWeight;
             else return false;
         }

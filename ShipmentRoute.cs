@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 
 using System.IO;
+using System.Text;
 
 namespace ShipmentRouteChecker
 {
@@ -16,16 +17,34 @@ namespace ShipmentRouteChecker
         public long TotalWeight { get; private set; }
         public List<RouteLeg> RouteLegs { get; }
 
-        public ShipmentRoute(string inputFile)
+        private ShipmentRoute()
         {
             RouteLegs = new();
-            ParseInputFile(inputFile);
         }
 
-        private void ParseInputFile(string inputFile)
+        public static ShipmentRoute FromFile(string filePath)
         {
-            using var input = File.OpenText(inputFile);
+            using var fr = File.OpenText(filePath);
+            var result = new ShipmentRoute();
+            result.ParseInput(fr);
+            return result;
+        }
 
+        public static ShipmentRoute FromString(string description)
+        {
+            using var ms = new MemoryStream();
+            ms.Write(Encoding.UTF8.GetBytes(description));
+            ms.Seek(0, SeekOrigin.Begin);
+
+            var result = new ShipmentRoute();
+            using var sr = new StreamReader(ms);
+            result.ParseInput(sr);
+
+            return result;
+        }
+
+        private void ParseInput(StreamReader input)
+        {
             var routeParameters = input.ReadLine().Split(' ');
 
             //Initially source holds all the cargo
