@@ -56,12 +56,15 @@ namespace ShipmentRouteChecker
             while (!input.EndOfStream)
             {
                 line = input.ReadLine();
+
                 var components = line.Split(' ');
-                RouteNode source;
-                RouteNode destination;
                 var sourceID = RouteNodes.FindIndex(0, (node) => node.IATACode == components[1]);
                 var destinationID = RouteNodes.FindIndex(0, (node) => node.IATACode == components[2]);
 
+                RouteNode source;
+                RouteNode destination;
+
+                // If source node already exists
                 if (sourceID >= 0)
                     source = RouteNodes[sourceID];
                 else
@@ -70,6 +73,7 @@ namespace ShipmentRouteChecker
                     RouteNodes.Add(source);
                 }
 
+                // If destination node already exists
                 if (destinationID >= 0)
                     destination = RouteNodes[destinationID];
                 else
