@@ -6,69 +6,55 @@ namespace ShipmentRouteChecker
 {
     public class RouteChecker
     {
-        private Dictionary<string, long> weights;
-        private Dictionary<string, bool> dailyDeficit;
-        private DateTime schedulePosition;
-
         public RouteChecker()
         {
-            weights = new();
-            dailyDeficit = new();
         }
 
         /// <summary>
-        /// Goes through the route day-by-day, calculating resulting weights at each node.
+        /// Goes through the nodes, totalling the in- and outbound weights, respecting the date.
         /// </summary>
         /// <param name="route">Route to verify</param>
         /// <returns></returns>
         public bool VerifyRoute(ShipmentRoute route)
         {
-            schedulePosition = route.RouteLegs.First().ShipmentDate;
-            weights.Clear();
-            weights[route.Source.IATACode] = route.TotalWeight;
-            dailyDeficit.Clear();
-
-            // At the end of each day we check if everything's balanced (no cargo shipped before it arrived).
-            bool DeficitResolved(DateTime newDate)
+            long currentWeight = 0;
+            bool result = false;
+            foreach (var node in route.RouteNodes)
             {
-                foreach (var node in dailyDeficit)
-                {
-                    if (weights[node.Key] < 0)
-                        return false;
-                }
-                dailyDeficit.Clear();
-                schedulePosition = newDate;
-                return true;
-            }
-
-            route.RouteLegs.Sort(new Comparison<RouteLeg>((leg1, leg2) => leg1.ShipmentDate.CompareTo(leg2.ShipmentDate)));
-
-            //  Go through the route that's sorted by date. Move cargo, remember deficit.
-            foreach (var leg in route.RouteLegs)
-            {
-                if (leg.ShipmentDate != schedulePosition)
-                {
-                    if (!DeficitResolved(leg.ShipmentDate)) return false;
-                }
-
-                if (weights.ContainsKey(leg.Destination.IATACode))
-                    weights[leg.Destination.IATACode] += leg.Weight;
+                // Index of last arrived shipment
+                var inIndex = 0;
+                if (node.IATACode == route.Source.IATACode)
+                    currentWeight = route.TotalWeight;
                 else
-                    weights[leg.Destination.IATACode] = leg.Weight;
+                    currentWeight = 0;
 
-                if (weights.ContainsKey(leg.Source.IATACode))
-                    weights[leg.Source.IATACode] -= leg.Weight;
-                else
-                    weights[leg.Source.IATACode] = -leg.Weight;
+                node.InboundLegs.Sort((leg1, leg2) => leg1.ShipmentDate.CompareTo(leg2.ShipmentDate));
+                node.OutboundLegs.Sort((leg1, leg2) => leg1.ShipmentDate.CompareTo(leg2.ShipmentDate));
 
-                if (weights[leg.Source.IATACode] < 0)
-                    dailyDeficit[leg.Source.IATACode] = true;
+                // Try to resolve all outbound shipments with available cargo
+                foreach (var leg in node.OutboundLegs)
+                {
+                    // Calculate how much cargo has arrived at this point
+                    while (inIndex<node.InboundLegs.Count && node.InboundLegs[inIndex].ShipmentDate <= leg.ShipmentDate)
+                    {
+                        currentWeight += node.InboundLegs[inIndex].Weight;
+                        inIndex++;
+                    }
+                    currentWeight -= leg.Weight;
+                    // If we have a deficit, route is invalid
+                    if (currentWeight < 0) return false;
+                }
+
+                // If we're procesing the destination, it might not be the last in node list, save the result in a variable.
+                if (node.IATACode == route.Destination.IATACode)
+                {
+                    currentWeight = node.InboundLegs.Sum((leg) => leg.Weight);
+                    result = currentWeight == route.TotalWeight;
+                }
+                else if (currentWeight != 0)
+                    return false;
             }
-
-            // If everything's balanced and cargo arrived at the destination, check the total weight.
-            if (DeficitResolved(schedulePosition) && weights.ContainsKey(route.Destination.IATACode))
-                return weights[route.Destination.IATACode] == route.TotalWeight;
-            else return false;
+            return result;
         }
     }
 }

@@ -18,18 +18,19 @@ namespace ShipmentRouteChecker
             var route = ShipmentRoute.FromFile(inputPath);
             var checker = new RouteChecker();
             Console.WriteLine(checker.VerifyRoute(route));
+
             Console.ReadLine();
         }
 
         /// <summary>
         /// Helper to see how long it takes\ how much memory it takes to verify a route
         /// </summary>
-        private static void Profile()
+        private static void Profile(long legs)
         {
             var checker = new RouteChecker();
             Stopwatch sw = new Stopwatch();
 
-            var test = TestRoute(1000000);
+            var test = TestRoute(legs);
 
             // Warmup, JIT optimization
             checker.VerifyRoute(test);

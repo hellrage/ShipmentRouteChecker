@@ -13,13 +13,12 @@ namespace ShipmentRouteChecker
         public DateTime ShipmentDate { get; }
         public long Weight { get; }
 
-        public RouteLeg(string description)
+        public RouteLeg(RouteNode source, RouteNode destination, long weight, DateTime date)
         {
-            var components = description.Split(' ');
-            Source = new RouteNode(components[1]);
-            Destination = new RouteNode(components[2]);
-            Weight = Convert.ToInt64(components[3]);
-            ShipmentDate = DateTime.Parse(components[4]);
+            Source = source;
+            Destination = destination;
+            Weight = weight;
+            ShipmentDate = date;
         }
 
         public override string ToString()

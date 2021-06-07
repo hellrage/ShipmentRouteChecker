@@ -15,11 +15,11 @@ namespace ShipmentRouteChecker
         public RouteNode Destination { get; private set; }
         // No limit or units given for weight, assume very large
         public long TotalWeight { get; private set; }
-        public List<RouteLeg> RouteLegs { get; }
+        public List<RouteNode> RouteNodes { get; }
 
         private ShipmentRoute()
         {
-            RouteLegs = new();
+            RouteNodes = new();
         }
 
         public static ShipmentRoute FromFile(string filePath)
@@ -56,8 +56,32 @@ namespace ShipmentRouteChecker
             while (!input.EndOfStream)
             {
                 line = input.ReadLine();
-                var leg = new RouteLeg(line);
-                RouteLegs.Add(leg);
+                var components = line.Split(' ');
+                RouteNode source;
+                RouteNode destination;
+                var sourceID = RouteNodes.FindIndex(0, (node) => node.IATACode == components[1]);
+                var destinationID = RouteNodes.FindIndex(0, (node) => node.IATACode == components[2]);
+
+                if (sourceID >= 0)
+                    source = RouteNodes[sourceID];
+                else
+                {
+                    source = new RouteNode(components[1]);
+                    RouteNodes.Add(source);
+                }
+
+                if (destinationID >= 0)
+                    destination = RouteNodes[destinationID];
+                else
+                {
+                    destination = new RouteNode(components[2]);
+                    RouteNodes.Add(destination);
+                }
+
+                var leg = new RouteLeg(source, destination, Convert.ToInt64(components[3]), DateTime.Parse(components[4]));
+
+                leg.Source.AddLeg(leg, false);
+                leg.Destination.AddLeg(leg, true);
             }
         }
     }
